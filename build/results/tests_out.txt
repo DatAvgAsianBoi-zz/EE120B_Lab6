@@ -1,0 +1,7 @@
+Breakpoint 1 at 0x3b4: file source/main.c, line 87.
+Note: automatically using hardware breakpoints for read-only addresses.
+======================================================
+Running all tests..."
+
+"Cycle"...test/tests.gdb:31: Error in sourced command file:
+Remote connection closed
