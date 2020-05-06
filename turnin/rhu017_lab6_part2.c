@@ -17,8 +17,9 @@ volatile unsigned char TimerFlag = 0;
 unsigned long _avr_timer_M = 1;
 unsigned long _avr_timer_cntcurr = 0;
 
-enum States {start, light1, light2, light3, wait, restart} state;
+enum States {start, light1, light2, light3, light4, wait, restart} state;
 unsigned char tmpB;
+unsigned char released = 1;
 
 void TimerOn(){
       TCCR1B = 0x0B;    //bit3 = 0: clear timer on compare; 8MHz clock = 8000000/64 = 125,000 ticks/s
@@ -49,39 +50,56 @@ void TimerSet(unsigned long M){
 void tick(){
       switch(state){
             case start:
-                  if(~PINA & 0x01)
-                        state = start;
-                  else
-                        state = light1;
+                  state = light1;
                   tmpB = 0x00;
                   break;
             case light1:
-                  if(~PINA & 0x01)
+                  if(~PINA & 0x01 && released){
                         state = wait;
+                        released = 0;
+                  }
                   else
                         state = light2;
                   break;
             case light2:
-                  if(~PINA & 0x01)
+                  if(~PINA & 0x01 && released){
                         state = wait;
+                        released = 0;
+                  }
                   else
                         state = light3;
                   break;
             case light3:
-                  if(~PINA & 0x01)
+                  if(~PINA & 0x01 && released){
                         state = wait;
+                        released = 0;
+                  }
+                  else
+                        state = light4;
+                  break;
+            case light4:
+                  if(~PINA & 0x01 && released){
+                        state = wait;
+                        released = 0;
+                  }
                   else
                         state = light1;
                   break;
             case wait:
-                  if(~PINA & 0x01)
+                  if(~PINA & 0x01){
                         state = wait;
-                  else
+                        released = 0;
+                  }
+                  else{
                         state = restart;
+                        released = 1;
+                  }
                   break;
             case restart:
-                  if(~PINA & 0x01)
-                        state = start;
+                  if(~PINA & 0x01){
+                        state = light1;
+                        released = 0;
+                  }
                   else
                         state = restart;
                   break;
@@ -96,23 +114,29 @@ void tick(){
             case light3:
                   tmpB = 0x04;
                   break;
+            case light4:
+                  tmpB = 0x02;
+                  break;
       }
 }
 
 int main(void) {
-    /* Insert DDR and PORT initializations */
-    DDRB = 0xFF;  PORTB = 0x00;
-    DDRA = 0x00;  PORTA = 0xFF;
-    TimerSet(300);
-    TimerOn();
-    tmpB = 0xFF;
-    /* Insert your solution below */
-    state = start;
-    while (1) {
-          tick();
-          PORTB = tmpB;
-          while(!TimerFlag);
-          TimerFlag = 0;
-    }
-    return 1;
+      /* Insert DDR and PORT initializations */
+      DDRB = 0xFF;  PORTB = 0x00;
+      DDRA = 0x00;  PORTA = 0xFF;
+      TimerSet(300);
+      TimerOn();
+      tmpB = 0xFF;
+      /* Insert your solution below */
+      state = start;
+      released = 1;
+      while (1) {
+            if(PINA & 0x01)
+                  released = 1;
+            tick();
+            PORTB = tmpB;
+            while(!TimerFlag);
+            TimerFlag = 0;
+      }
+      return 1;
 }
